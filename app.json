@@ -1,5 +1,8 @@
 {
   "expo": {
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "name": "ShxToDoList",
     "slug": "ShxToDoList",
     "version": "1.0.0",

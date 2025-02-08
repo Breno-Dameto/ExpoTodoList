@@ -1,109 +1,135 @@
-import { StyleSheet, Image, Platform } from 'react-native';
-
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, ActivityIndicator, Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { TaskItem } from '@/components/TaskItem';
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+interface Task {
+  id: number;
+  title: string;
+  completed: boolean;
+}
+
+export default function ExploreScreen() {
+  const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadTasks = async () => {
+        setLoading(true);
+        await loadCompletedTasks();
+        setLoading(false);
+      };
+      loadTasks();
+    }, [])
   );
+
+  const loadCompletedTasks = async () => {
+    try {
+      const storedTasks = await AsyncStorage.getItem('tasks');
+      console.log('Stored tasks:', storedTasks); 
+      
+      if (storedTasks) {
+        const allTasks = JSON.parse(storedTasks);
+        console.log('All tasks:', allTasks);
+        
+        // Get all completed tasks
+        const completedTasksList = allTasks.filter((task: Task) => task.completed === true);
+        console.log('Completed tasks:', completedTasksList); 
+        
+        setCompletedTasks(completedTasksList);
+      }
+    } catch (error) {
+      console.error('Error loading completed tasks:', error);
+    }
+  };
+
+const deleteTask = async (id: number) => {
+  try {
+    const storedTasks = await AsyncStorage.getItem('tasks');
+    if (storedTasks) {
+   
+      const allTasks = JSON.parse(storedTasks);
+      
+   
+      const updatedAllTasks = allTasks.filter((task: Task) => task.id !== id);
+      
+      await AsyncStorage.setItem('tasks', JSON.stringify(updatedAllTasks));
+      
+      const updatedCompletedTasks = updatedAllTasks.filter((task: Task) => task.completed);
+      setCompletedTasks(updatedCompletedTasks);
+    }
+  } catch (error) {
+    console.error('Error deleting task:', error);
+  }
+};
+
+return (
+  <ParallaxScrollView
+       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+    headerImage={
+      <Image
+        style={styles.headerImage}
+        resizeMode="contain"
+        source={require('../../assets/images/task-list.png')}
+      />
+    }>
+    <ThemedView style={styles.container}>
+      <ThemedText type="title">Completed Tasks</ThemedText>
+      
+      {loading ? (
+        <ActivityIndicator size="large" color="#D0D0D0" style={styles.loader} />
+      ) : (
+        <ThemedView style={styles.taskList}>
+          {completedTasks.map(task => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onToggle={() => {}} 
+              onDelete={deleteTask}
+            />
+          ))}
+          
+          {completedTasks.length === 0 && (
+            <ThemedText style={styles.emptyText}>
+              No completed tasks yet
+            </ThemedText>
+          )}
+        </ThemedView>
+      )}
+    </ThemedView>
+  </ParallaxScrollView>
+);
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+  },
   headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
     position: 'absolute',
+    bottom: 0,
+    left: '50%',  
+    transform: [{ translateX: -145 }], 
+    height: 178,
+    width: 290,
   },
-  titleContainer: {
-    flexDirection: 'row',
+  taskList: {
     gap: 8,
+    marginTop: 16,
   },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 32,
+    opacity: 0.6,
+  },
+  loader: {
+    marginTop: 32,
+  },
+  
 });
